@@ -15,10 +15,11 @@ class Project:
         self.levels_times = self.get_levels_times()
         self.min_time = self.get_min_time()  # Min time without crashing In weeks
         self.activities_durations = self.get_activities_durations()  # Dictionary
-        self.activities_start_times = self.get_activities_start_times()     # Dictionary
-        self.activities_end_times = self.get_activities_end_times()     # Dictionary
+        self.activities_start_times = self.get_activities_start_times()  # Dictionary
+        self.activities_end_times = self.get_activities_end_times()  # Dictionary
         self.max_network_length = max(self.lengths(self.network))
-        self.project_duration = self.activities_end_times[max(self.activities_end_times, key=self.activities_end_times.get)]
+        self.project_duration = self.activities_end_times[
+            max(self.activities_end_times, key=self.activities_end_times.get)]
         self.project_acceptable_duration = self.project_duration
 
     def get_activities_durations(self):
@@ -57,18 +58,6 @@ class Project:
                             level.append(activity.name)
 
         return levels
-
-    # def get_activities_start_times(self):
-    #     activities_start_times = dict()
-    #     for activity in self.activities:
-    #         predecessors_duration = 0
-    #         for predecessor in activity.predecessor:
-    #             if self.activities_durations[predecessor] > predecessors_duration:
-    #                 predecessors_duration = self.activities_durations[predecessor]
-    #
-    #         activities_start_times.update({activity.name: predecessors_duration})
-    #
-    #     return activities_start_times
 
     def lengths(self, x):
         if isinstance(x, list):
