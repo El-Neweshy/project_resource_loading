@@ -26,8 +26,9 @@ class Project:
             max(self.activities_end_times, key=self.activities_end_times.get)]
         self.project_acceptable_duration = self.project_duration
         self.activity_resources_lists = self.get_activity_resources_lists()
-        self.resources_loading_dataframe = self.get_resources_loading_dataframe()
-        self.get_resource_loading = None
+        self.resources_loading_dataframe = self.get_resources_loading_dataframe()[0]
+        self.week_resource_loading = self.get_resources_loading_dataframe()[1]
+        self.max_resources_per_week = max(self.week_resource_loading)
 
     def get_activities_durations(self):
         activities_durations = dict()
@@ -111,19 +112,13 @@ class Project:
         return activity_resources_lists
 
     def get_resources_loading_dataframe(self):
-        values = []
-        for item, value in self.activity_resources_lists.items():
-            values.append(value)
+        df = pd.DataFrame(self.activity_resources_lists)
+        df.loc['Total'] = df.sum()
+        df.loc[:, 'Week_total'] = df.sum(numeric_only=True, axis=1)
+        week_total = df['Week_total'].tolist()
+        week_total = week_total[:-1]
+        return df, week_total
 
-        columns = []
-        for item in range(1, self.project_duration + 1):
-            columns.append(str(item))
-        df = pd.DataFrame(values, columns=columns)
-
-        return df
-
-    def get_resource_loading(self):
-        return
 
 
 if __name__ == "__main__":
@@ -147,4 +142,6 @@ if __name__ == "__main__":
     print("max_network_length:", project.max_network_length)
     print("project_duration:", project.project_duration)
     # print("activity_resources_lists:", project.activity_resources_lists)
-    print("resources_loading_data:", "\n", project.resources_loading_dataframe)
+    # print("resources_loading_data:", "\n", project.resources_loading_dataframe)
+    print("week_resource_loading:", project.week_resource_loading)
+    print("max_resources_per_week:", project.max_resources_per_week)
