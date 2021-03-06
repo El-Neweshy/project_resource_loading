@@ -1,11 +1,15 @@
+import pandas as pd
+
+
 class Activity:
-    def __init__(self, name, duration, num_resources, predecessor=[], successor=[]):
+    def __init__(self, name, duration, resources, predecessor=[], successor=[]):
         self.name = name
         self.duration = duration  # In weeks
-        self.num_resources = num_resources  # Per week
+        self.resources = resources  # Resources per week
         self.predecessor = predecessor
         self.successor = successor
         self.start_time = 0
+        self.activity_resources_list = []
 
 
 class Project:
@@ -21,6 +25,9 @@ class Project:
         self.project_duration = self.activities_end_times[
             max(self.activities_end_times, key=self.activities_end_times.get)]
         self.project_acceptable_duration = self.project_duration
+        self.activity_resources_lists = self.get_activity_resources_lists()
+        self.resources_loading_dataframe = self.get_resources_loading_dataframe()
+        self.get_resource_loading = None
 
     def get_activities_durations(self):
         activities_durations = dict()
@@ -92,16 +99,42 @@ class Project:
 
         return activities_end_times
 
+    def get_activity_resources_lists(self):
+        activity_resources_lists = dict()
+        for activity in self.activities:
+            activity_resources_list = [0] * activity.start_time + [activity.resources] * activity.duration + [0] * (
+                    self.project_duration - activity.duration - activity.start_time)
+
+            activity.activity_resources_list = activity_resources_list
+            activity_resources_lists.update({activity.name: activity_resources_list})
+
+        return activity_resources_lists
+
+    def get_resources_loading_dataframe(self):
+        values = []
+        for item, value in self.activity_resources_lists.items():
+            values.append(value)
+
+        columns = []
+        for item in range(1, self.project_duration + 1):
+            columns.append(str(item))
+        df = pd.DataFrame(values, columns=columns)
+
+        return df
+
+    def get_resource_loading(self):
+        return
+
 
 if __name__ == "__main__":
     # Define activities
-    A = Activity(name="A", duration=8, num_resources=6, successor=["B"])
-    B = Activity(name="B", duration=7, num_resources=4, predecessor=["A", "G"])
-    C = Activity(name="C", duration=6, num_resources=4, successor=["D"])
-    D = Activity(name="D", duration=2, num_resources=5, predecessor=["C"], successor=["E"])
-    E = Activity(name="E", duration=3, num_resources=6, predecessor=["D"])
-    F = Activity(name="F", duration=4, num_resources=2, successor=["G"])
-    G = Activity(name="G", duration=2, num_resources=6, predecessor=["F"], successor=["B"])
+    A = Activity(name="A", duration=8, resources=6, successor=["B"])
+    B = Activity(name="B", duration=7, resources=4, predecessor=["A", "G"])
+    C = Activity(name="C", duration=6, resources=4, successor=["D"])
+    D = Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"])
+    E = Activity(name="E", duration=3, resources=6, predecessor=["D"])
+    F = Activity(name="F", duration=4, resources=2, successor=["G"])
+    G = Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
 
     project = Project([A, B, C, D, E, F, G])
 
@@ -113,3 +146,5 @@ if __name__ == "__main__":
     print("activities_end_times:", project.activities_end_times)
     print("max_network_length:", project.max_network_length)
     print("project_duration:", project.project_duration)
+    # print("activity_resources_lists:", project.activity_resources_lists)
+    print("resources_loading_data:", "\n", project.resources_loading_dataframe)
