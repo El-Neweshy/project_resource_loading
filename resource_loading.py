@@ -1,4 +1,7 @@
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class Activity:
@@ -117,8 +120,50 @@ class Project:
         df.loc[:, 'Week_total'] = df.sum(numeric_only=True, axis=1)
         week_total = df['Week_total'].tolist()
         week_total = week_total[:-1]
+
         return df, week_total
 
+    def activities_dataframe(self):
+
+        data = []
+        for item, value in self.activities_start_times.items():
+            end = self.activities_end_times[item]
+            data.append([item, value, end])
+            # print(item, value, end)
+
+        df = pd.DataFrame(data, columns=["activity", "start_time", "end_time"])
+
+        return df
+
+    def visualize_activity_load(self):
+        df = self.activities_dataframe()
+        db = df[['start_time', 'end_time', 'activity']]
+        # create start and end based on activity
+        max_time = db.groupby(['activity'])['end_time'].max().reset_index()
+        min_time = db.groupby(['activity'])['start_time'].min().reset_index()
+        var_price = pd.DataFrame()
+        var_price['range'] = max_time.end_time - min_time.start_time
+        var_price['activity'] = min_time['activity']
+        # var_price = var_price.sort_values(by='range')
+
+        # sort max and min price according to variance
+        # max_price = max_price.reindex(var_price.index)
+        # min_price = min_price.reindex(var_price.index)
+
+        plt.figure(figsize=(8, 6))
+        plt.hlines(y=min_time['activity'], xmin=min_time['start_time'], xmax=max_time['end_time'],
+                   color='grey', alpha=0.4)
+        plt.scatter(min_time['start_time'], min_time['activity'], color='black', alpha=1,
+                    label='start time')
+        plt.scatter(max_time['end_time'], max_time['activity'], color='black', alpha=1,
+                    label='end time')
+        # plt.legend()
+
+        plt.title("Resources Loading")
+        plt.xlabel('Weeks')
+        plt.ylabel('Activities')
+
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -145,3 +190,6 @@ if __name__ == "__main__":
     # print("resources_loading_data:", "\n", project.resources_loading_dataframe)
     print("week_resource_loading:", project.week_resource_loading)
     print("max_resources_per_week:", project.max_resources_per_week)
+    print("activities_dataframe:", project.activities_dataframe())
+
+    project.visualize_activity_load()
