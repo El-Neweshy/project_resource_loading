@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from copy import deepcopy
 
 
 class Activity:
-    def __init__(self, name, duration, resources, predecessor=[], successor=[]):
+    def __init__(self, name, duration, resources, predecessor=[], successor=[], dividable=False):
         self.name = name
         self.duration = duration  # In weeks
         self.resources = resources  # Resources per week
@@ -13,6 +14,31 @@ class Activity:
         self.successor = successor
         self.start_time = 0
         self.activity_resources_list = []
+        self.dividable = dividable
+
+        if self.dividable:
+            self.divided_variations = self.get_divided_variations()
+
+    def get_divided_variations(self):
+        if self.dividable and self.duration > 1:
+            activity_divided_variations = []
+            for i in range(self.duration):
+                sub_activity = deepcopy(self)
+                sub_activity.name = self.name + str(i + 1)
+                sub_activity.duration = 1
+                sub_activity.successor = self.name + str(i + 2)
+                # sub_activity.resources = round(self.resources / self.duration, 2)
+                if i != 0:
+                    sub_activity.predecessor = self.name + str(i)
+
+                if i == self.duration - 1:
+                    sub_activity.successor = self.successor
+
+                # print(sub_activity.name, sub_activity.duration, sub_activity.predecessor, sub_activity.successor, sub_activity.resources)
+
+            activity_divided_variations.append(sub_activity)
+
+        return activity_divided_variations
 
 
 class Project:
@@ -129,13 +155,12 @@ class Project:
         for item, value in self.activities_start_times.items():
             end = self.activities_end_times[item]
             data.append([item, value, end])
-            # print(item, value, end)
 
         df = pd.DataFrame(data, columns=["activity", "start_time", "end_time"])
 
         return df
 
-    def visualize_activity_load(self):
+    def visualize_activities_schedule(self):
         df = self.activities_dataframe()
         db = df[['start_time', 'end_time', 'activity']]
         # create start and end based on activity
@@ -144,11 +169,6 @@ class Project:
         var_price = pd.DataFrame()
         var_price['range'] = max_time.end_time - min_time.start_time
         var_price['activity'] = min_time['activity']
-        # var_price = var_price.sort_values(by='range')
-
-        # sort max and min price according to variance
-        # max_price = max_price.reindex(var_price.index)
-        # min_price = min_price.reindex(var_price.index)
 
         plt.figure(figsize=(8, 6))
         plt.hlines(y=min_time['activity'], xmin=min_time['start_time'], xmax=max_time['end_time'],
@@ -157,12 +177,22 @@ class Project:
                     label='start time')
         plt.scatter(max_time['end_time'], max_time['activity'], color='black', alpha=1,
                     label='end time')
-        # plt.legend()
 
-        plt.title("Resources Loading")
+        plt.title("Activities Schedule")
         plt.xlabel('Weeks')
         plt.ylabel('Activities')
 
+        plt.show()
+
+    def visualize_resources_loading(self):
+        x = np.arange(15)
+        plt.bar(x, height=self.week_resource_loading)
+
+        plt.xticks(x, [str(i + 1) for i in range(len(self.week_resource_loading))])
+
+        plt.ylabel('Number of Resources')
+        plt.xlabel('Weeks')
+        plt.title("Resource Loading")
         plt.show()
 
 
@@ -190,6 +220,7 @@ if __name__ == "__main__":
     # print("resources_loading_data:", "\n", project.resources_loading_dataframe)
     print("week_resource_loading:", project.week_resource_loading)
     print("max_resources_per_week:", project.max_resources_per_week)
-    print("activities_dataframe:", project.activities_dataframe())
+    # print("activities_dataframe:", project.activities_dataframe())
 
-    project.visualize_activity_load()
+    project.visualize_activities_schedule()
+    project.visualize_resources_loading()
