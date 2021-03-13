@@ -6,7 +6,7 @@ from copy import deepcopy
 
 
 class Activity:
-    def __init__(self, name, duration, resources, predecessor=[], successor=[], dividable=False):
+    def __init__(self, name, duration, resources, predecessor=[], successor=[], dividable=False, delay=0):
         self.name = name
         self.duration = duration  # In weeks
         self.resources = resources  # Resources per week
@@ -14,6 +14,7 @@ class Activity:
         self.successor = successor
         self.start_time = 0
         self.activity_resources_list = []
+        self.delay = delay
         self.dividable = dividable
 
         if self.dividable:
@@ -112,6 +113,7 @@ class Project:
 
                     if level_start_time > activity.start_time:
                         activity.start_time = level_start_time
+                    activity.start_time += activity.delay
             activities_start_times.update({activity.name: activity.start_time})
 
         return activities_start_times
@@ -139,6 +141,7 @@ class Project:
 
     def get_resources_loading_dataframe(self):
         df = pd.DataFrame(self.activity_resources_lists)
+        print(df)
         df.loc['Total'] = df.sum()
         df.loc[:, 'Week_total'] = df.sum(numeric_only=True, axis=1)
         week_total = df['Week_total'].tolist()
@@ -225,7 +228,7 @@ if __name__ == "__main__":
     B = Activity(name="B", duration=7, resources=4, predecessor=["A", "G"])
     C = Activity(name="C", duration=6, resources=4, successor=["D"])
     D = Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"])
-    E = Activity(name="E", duration=3, resources=6, predecessor=["D"])
+    E = Activity(name="E", duration=3, resources=6, predecessor=["D"], delay=2)
     F = Activity(name="F", duration=4, resources=2, successor=["G"])
     G = Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
 
