@@ -26,17 +26,14 @@ class Activity:
                 sub_activity = deepcopy(self)
                 sub_activity.name = self.name + str(i + 1)
                 sub_activity.duration = 1
-                sub_activity.successor = self.name + str(i + 2)
-                # sub_activity.resources = round(self.resources / self.duration, 2)
+                sub_activity.successor = [self.name + str(i + 2)]
                 if i != 0:
-                    sub_activity.predecessor = self.name + str(i)
+                    sub_activity.predecessor = [self.name + str(i)]
 
                 if i == self.duration - 1:
                     sub_activity.successor = self.successor
 
-                # print(sub_activity.name, sub_activity.duration, sub_activity.predecessor, sub_activity.successor, sub_activity.resources)
-
-            activity_divided_variations.append(sub_activity)
+                activity_divided_variations.append(sub_activity)
 
         return activity_divided_variations
 
@@ -91,7 +88,7 @@ class Project:
             for level in levels:
                 for activity in self.activities:
                     for item in activity.predecessor:
-                        if level[-1] == str(item):
+                        if level[-1] == item:
                             level.append(activity.name)
 
         return levels
@@ -196,9 +193,35 @@ class Project:
         plt.show()
 
 
+class Projects:
+    def __init__(self, activities):
+        self.activities = activities
+
+    def get_projects_variations_after_splitting(self):
+        project_activities = []
+        for activity in self.activities:
+            if activity.dividable:
+                for item in activity.divided_variations:
+                    project_activities.append(item)
+            else:
+                project_activities.append(activity)
+
+        activity_new_ending_dict = {}
+        for activity in self.activities:
+            if activity.dividable:
+                activity_new_ending_dict.update({activity.name: str(activity.name + str(activity.duration))})
+
+        for activity in project_activities:
+            for activity_predecessor in activity.predecessor:
+                activity.predecessor = [activity_new_ending_dict[
+                                            activity_predecessor] if activity_predecessor in activity_new_ending_dict else x
+                                        for x in activity.predecessor]
+        return project_activities
+
+
 if __name__ == "__main__":
     # Define activities
-    A = Activity(name="A", duration=8, resources=6, successor=["B"])
+    A = Activity(name="A", duration=8, resources=6, successor=["B"], dividable=True)
     B = Activity(name="B", duration=7, resources=4, predecessor=["A", "G"])
     C = Activity(name="C", duration=6, resources=4, successor=["D"])
     D = Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"])
@@ -206,7 +229,11 @@ if __name__ == "__main__":
     F = Activity(name="F", duration=4, resources=2, successor=["G"])
     G = Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
 
-    project = Project([A, B, C, D, E, F, G])
+    projects = Projects([A, B, C, D, E, F, G])
+
+    # print(len(projects.get_projects_variations_after_splitting()), projects.get_projects_variations_after_splitting())
+
+    project = Project(projects.get_projects_variations_after_splitting())
 
     print("network:", project.network)
     print("levels_times:", project.levels_times)
