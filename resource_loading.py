@@ -141,7 +141,6 @@ class Project:
 
     def get_resources_loading_dataframe(self):
         df = pd.DataFrame(self.activity_resources_lists)
-        print(df)
         df.loc['Total'] = df.sum()
         df.loc[:, 'Week_total'] = df.sum(numeric_only=True, axis=1)
         week_total = df['Week_total'].tolist()
@@ -197,10 +196,13 @@ class Project:
 
 
 class Projects:
-    def __init__(self, activities):
+    def __init__(self, activities, max_project_duration):
         self.activities = activities
+        self.max_project_duration = max_project_duration
+        self.project_variations_after_splitting = self.get_project_variations_after_splitting()
+        self.all_possible_delay_combinations = self.get_all_possible_delay_combinations()
 
-    def get_projects_variations_after_splitting(self):
+    def get_project_variations_after_splitting(self):
         project_activities = []
         for activity in self.activities:
             if activity.dividable:
@@ -221,23 +223,76 @@ class Projects:
                                         for x in activity.predecessor]
         return project_activities
 
+    def get_all_possible_delay_combinations(self):
+
+        # get all combinations function
+        def sums(length, total_sum):
+            if length == 1:
+                yield (total_sum,)
+            else:
+                for value in range(total_sum + 1):
+                    for permutation in sums(length - 1, total_sum - value):
+                        yield (value,) + permutation
+
+        # initiate basic project to get levels data
+        project = Project(self.project_variations_after_splitting)
+        levels_times = project.levels_times
+        num_activities = [len(item) for item in project.network]
+
+        # Create a list with all possible combinations
+        items_lists = []
+        for i, level_duration in enumerate(levels_times):
+            allowed_total_delay_for_level = self.max_project_duration - level_duration
+            item_list = list(sums(num_activities[i], allowed_total_delay_for_level))
+            # print(len(list(sums(num_activities[i], allowed_total_delay_for_level))))
+
+            items_lists.append(item_list)
+
+        # print(items_lists)
+
+        def merge_two_lists_of_lists(lst1, lst2):
+            if not lst1:
+                return lst2
+
+            final_lst = []
+            for i in lst1:
+                for j in lst2:
+                    new_lst = i + j
+                    final_lst.append(new_lst)
+            return final_lst
+
+        target_lst = []
+        for i, item_lst in enumerate(items_lists):
+            target_lst = merge_two_lists_of_lists(target_lst, item_lst)
+
+        # print(len(target_lst), target_lst)
+
+        # print(len(merge_two_lists_of_lists(items_lists[1], items_lists[2])))
+
+        return target_lst
+
 
 if __name__ == "__main__":
+    # Define Maximum allowed project time
+    max_project_duration = 15
+
     # Define activities
-    A = Activity(name="A", duration=8, resources=6, successor=["B"], dividable=True)
+    A = Activity(name="A", duration=8, resources=6, successor=["B"])
     B = Activity(name="B", duration=7, resources=4, predecessor=["A", "G"])
     C = Activity(name="C", duration=6, resources=4, successor=["D"])
     D = Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"])
-    E = Activity(name="E", duration=3, resources=6, predecessor=["D"], delay=2)
+    E = Activity(name="E", duration=3, resources=6, predecessor=["D"])
     F = Activity(name="F", duration=4, resources=2, successor=["G"])
     G = Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
 
-    projects = Projects([A, B, C, D, E, F, G])
+    # Get possible projects after considering possible splitting and delaying
+    projects = Projects(activities=[A, B, C, D, E, F, G], max_project_duration=max_project_duration)
 
-    # print(len(projects.get_projects_variations_after_splitting()), projects.get_projects_variations_after_splitting())
+    # print(projects.get_all_projects_delay_variations())
+    print(projects.get_all_possible_delay_combinations())
 
-    project = Project(projects.get_projects_variations_after_splitting())
-
+    # compute project
+    project = Project(projects.get_project_variations_after_splitting())
     print("network:", project.network)
     print("levels_times:", project.levels_times)
     print("min_time:", project.min_time)
@@ -246,11 +301,8 @@ if __name__ == "__main__":
     print("activities_end_times:", project.activities_end_times)
     print("max_network_length:", project.max_network_length)
     print("project_duration:", project.project_duration)
-    # print("activity_resources_lists:", project.activity_resources_lists)
-    # print("resources_loading_data:", "\n", project.resources_loading_dataframe)
     print("week_resource_loading:", project.week_resource_loading)
     print("max_resources_per_week:", project.max_resources_per_week)
-    # print("activities_dataframe:", project.activities_dataframe())
-
-    project.visualize_activities_schedule()
-    project.visualize_resources_loading()
+    # Visualize project result
+    # project.visualize_activities_schedule()
+    # project.visualize_resources_loading()
