@@ -237,18 +237,71 @@ class Projects:
         # initiate basic project to get levels data
         project = Project(self.project_variations_after_splitting)
         levels_times = project.levels_times
-        num_activities = [len(item) for item in project.network]
+        network = project.network
+
+        sorted_zipped_lists = sorted(zip(levels_times, network))
+        sorted_network = [element for _, element in sorted_zipped_lists]
+        sorted_network = sorted_network[::-1]
+        sorted_levels_times = sorted(levels_times, reverse=True)
+
+        # print("sorted", sorted_network, sorted_levels_times)
+
+        # Remove duplicates from sorted network
+        final_sorted_network = []
+        for level in sorted_network:
+            for item in level:
+                if item not in final_sorted_network:
+                    final_sorted_network.append(item)
+
+        # print("final_sorted_network", final_sorted_network)
+
+        # Update number of activities in each list after removing duplicates
+        new_network = []
+        all_activities = []
+        for level in network:
+            new_level = []
+            for item in level:
+                if item not in all_activities:
+                    new_level.append(item)
+                all_activities.append(item)
+
+            new_network.append(new_level)
+
+        # print("new_network", new_network)
+
+        # Update number of activities in each list after removing suplicates
+        new_network_wo_duplicates = []
+        all_activities = []
+        for level in new_network:
+            new_level = []
+            for item in level:
+                if item not in all_activities:
+                    new_level.append(item)
+                all_activities.append(item)
+
+            new_network_wo_duplicates.append(new_level)
+
+        num_activities = [len(item) for item in new_network_wo_duplicates]
+
+        # print("num_activities", num_activities)
 
         # Create a list with all possible combinations
         items_lists = []
-        for i, level_duration in enumerate(levels_times):
+        for i, level_duration in enumerate(sorted_levels_times):
             allowed_total_delay_for_level = self.max_project_duration - level_duration
-            item_list = list(sums(num_activities[i], allowed_total_delay_for_level))
+
+            item_list = []
+            if allowed_total_delay_for_level == 0:
+                item_list = list(sums(num_activities[i], allowed_total_delay_for_level))
+
+            for w in range(allowed_total_delay_for_level):
+                item_list += list(sums(num_activities[i], allowed_total_delay_for_level - w))
+
             # print(len(list(sums(num_activities[i], allowed_total_delay_for_level))))
 
             items_lists.append(item_list)
 
-        # print(items_lists)
+        # print(len(items_lists), items_lists)
 
         def merge_two_lists_of_lists(lst1, lst2):
             if not lst1:
@@ -269,7 +322,30 @@ class Projects:
 
         # print(len(merge_two_lists_of_lists(items_lists[1], items_lists[2])))
 
-        return target_lst
+        return final_sorted_network, target_lst
+
+    def get_all_possible_projects(self):
+        final_sorted_network, target_lst = self.get_all_possible_delay_combinations()
+
+        # get activity abjects ordered according to final_sorted_network
+        ordered_activities = []
+        for i in range(len(final_sorted_network)):
+            for activity in activities:
+                if activity.name == final_sorted_network[i]:
+                    ordered_activities.append(activity)
+
+        # generate all possible projects according to all delay combinations
+        all_projects = []
+        for delay_times in target_lst:
+            new_activities = []
+            for i, activity in enumerate(ordered_activities):
+                activity_copy = deepcopy(activity)
+                activity_copy.delay = delay_times[i]
+                new_activities.append(activity_copy)
+
+            all_projects.append(Project(new_activities))
+
+        return all_projects
 
 
 if __name__ == "__main__":
@@ -277,21 +353,47 @@ if __name__ == "__main__":
     max_project_duration = 15
 
     # Define activities
-    A = Activity(name="A", duration=8, resources=6, successor=["B"])
-    B = Activity(name="B", duration=7, resources=4, predecessor=["A", "G"])
-    C = Activity(name="C", duration=6, resources=4, successor=["D"])
-    D = Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"])
-    E = Activity(name="E", duration=3, resources=6, predecessor=["D"])
-    F = Activity(name="F", duration=4, resources=2, successor=["G"])
-    G = Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
+    activities = [
+        Activity(name="A", duration=8, resources=6, successor=["B"]),
+        Activity(name="B", duration=7, resources=4, predecessor=["A", "G"]),
+        Activity(name="C", duration=6, resources=4, successor=["D"], dividable=True),
+        Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"]),
+        Activity(name="E", duration=3, resources=6, predecessor=["D"]),
+        Activity(name="F", duration=4, resources=2, successor=["G"]),
+        Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
+    ]
 
     # Get possible projects after considering possible splitting and delaying
-    projects = Projects(activities=[A, B, C, D, E, F, G], max_project_duration=max_project_duration)
+    projects = Projects(activities=activities, max_project_duration=max_project_duration)
 
-    # print(projects.get_all_projects_delay_variations())
-    print(projects.get_all_possible_delay_combinations())
+    # Get all possible projects
+    all_projects = projects.get_all_possible_projects()
 
-    # compute project
+    # All possible project number
+    print('all_possible_project_plans', len(all_projects), '\n', '-----------------')
+
+    # Iterate on all projects
+    for project in all_projects:
+        # print(project.project_duration)
+        # print("network:", project.network)
+        # print("levels_times:", project.levels_times)
+        # print("min_time:", project.min_time)
+        # print("activities_durations:", project.activities_durations)
+        print("activities_start_times:", project.activities_start_times)
+        # print("activities_end_times:", project.activities_end_times)
+        # print("max_network_length:", project.max_network_length)
+        print("project_duration:", project.project_duration)
+        # print("week_resource_loading:", project.week_resource_loading)
+        print("max_resources_per_week:", project.max_resources_per_week)
+
+        # project.visualize_activities_schedule()
+        # project.visualize_resources_loading()
+
+        print('-----------------')
+
+
+    """
+    # Compute project
     project = Project(projects.get_project_variations_after_splitting())
     print("network:", project.network)
     print("levels_times:", project.levels_times)
@@ -306,3 +408,4 @@ if __name__ == "__main__":
     # Visualize project result
     # project.visualize_activities_schedule()
     # project.visualize_resources_loading()
+    """
