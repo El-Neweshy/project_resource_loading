@@ -1,7 +1,5 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from copy import deepcopy
 
 
@@ -201,6 +199,7 @@ class Projects:
         self.max_project_duration = max_project_duration
         self.project_variations_after_splitting = self.get_project_variations_after_splitting()
         self.all_possible_delay_combinations = self.get_all_possible_delay_combinations()
+        self.all_possible_projects = self.get_all_possible_projects()
 
     def get_project_variations_after_splitting(self):
         project_activities = []
@@ -221,6 +220,7 @@ class Projects:
                 activity.predecessor = [activity_new_ending_dict[
                                             activity_predecessor] if activity_predecessor in activity_new_ending_dict else x
                                         for x in activity.predecessor]
+
         return project_activities
 
     def get_all_possible_delay_combinations(self):
@@ -244,16 +244,12 @@ class Projects:
         sorted_network = sorted_network[::-1]
         sorted_levels_times = sorted(levels_times, reverse=True)
 
-        # print("sorted", sorted_network, sorted_levels_times)
-
         # Remove duplicates from sorted network
         final_sorted_network = []
         for level in sorted_network:
             for item in level:
                 if item not in final_sorted_network:
                     final_sorted_network.append(item)
-
-        # print("final_sorted_network", final_sorted_network)
 
         # Update number of activities in each list after removing duplicates
         new_network = []
@@ -266,8 +262,6 @@ class Projects:
                 all_activities.append(item)
 
             new_network.append(new_level)
-
-        # print("new_network", new_network)
 
         # Update number of activities in each list after removing suplicates
         new_network_wo_duplicates = []
@@ -283,8 +277,6 @@ class Projects:
 
         num_activities = [len(item) for item in new_network_wo_duplicates]
 
-        # print("num_activities", num_activities)
-
         # Create a list with all possible combinations
         items_lists = []
         for i, level_duration in enumerate(sorted_levels_times):
@@ -297,11 +289,7 @@ class Projects:
             for w in range(allowed_total_delay_for_level):
                 item_list += list(sums(num_activities[i], allowed_total_delay_for_level - w))
 
-            # print(len(list(sums(num_activities[i], allowed_total_delay_for_level))))
-
             items_lists.append(item_list)
-
-        # print(len(items_lists), items_lists)
 
         def merge_two_lists_of_lists(lst1, lst2):
             if not lst1:
@@ -318,10 +306,6 @@ class Projects:
         for i, item_lst in enumerate(items_lists):
             target_lst = merge_two_lists_of_lists(target_lst, item_lst)
 
-        # print(len(target_lst), target_lst)
-
-        # print(len(merge_two_lists_of_lists(items_lists[1], items_lists[2])))
-
         return final_sorted_network, target_lst
 
     def get_all_possible_projects(self):
@@ -330,7 +314,7 @@ class Projects:
         # get activity abjects ordered according to final_sorted_network
         ordered_activities = []
         for i in range(len(final_sorted_network)):
-            for activity in activities:
+            for activity in self.project_variations_after_splitting:
                 if activity.name == final_sorted_network[i]:
                     ordered_activities.append(activity)
 
@@ -343,9 +327,52 @@ class Projects:
                 activity_copy.delay = delay_times[i]
                 new_activities.append(activity_copy)
 
-            all_projects.append(Project(new_activities))
+            # Exclude projects with durations more than allowed
+            p = Project(new_activities)
+            if p.project_duration <= self.max_project_duration:
+                all_projects.append(p)
 
         return all_projects
+
+
+class Conclusion:
+    def __init__(self, projects):
+        self.projects = projects
+        self.df = self.get_projects_data_in_df()
+
+    def get_projects_data_in_df(self):
+        columns = [
+            "project",
+            "duration",
+            "Max no. resources in a week",
+            "network",
+            "activities start times",
+            "activities end times",
+            "activities durations",
+            "resources allocation",
+        ]
+        df = pd.DataFrame(columns=columns)
+        for p in self.projects:
+            project_data = {
+                "project": p,
+                "duration": p.project_duration,
+                "Max no. resources in a week": p.max_resources_per_week,
+                "network": p.network,
+                "activities start times": p.activities_start_times,
+                "activities end times": p.activities_end_times,
+                "activities durations": p.activities_durations,
+                "resources allocation": p.week_resource_loading,
+            }
+
+            df = df.append(project_data, ignore_index=True)
+        return df
+
+    def print_df_csv(self):
+        printed_df = deepcopy(self.df)
+
+        printed_df = printed_df.drop('project', 1)
+
+        printed_df.to_csv('conclusion.csv')
 
 
 if __name__ == "__main__":
@@ -356,18 +383,21 @@ if __name__ == "__main__":
     activities = [
         Activity(name="A", duration=8, resources=6, successor=["B"]),
         Activity(name="B", duration=7, resources=4, predecessor=["A", "G"]),
-        Activity(name="C", duration=6, resources=4, successor=["D"], dividable=True),
+        Activity(name="C", duration=6, resources=4, successor=["D"]),
         Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"]),
         Activity(name="E", duration=3, resources=6, predecessor=["D"]),
         Activity(name="F", duration=4, resources=2, successor=["G"]),
         Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
     ]
 
+    # project_test = Project(activities=activities)
+    # print(project_test.network)
+
     # Get possible projects after considering possible splitting and delaying
     projects = Projects(activities=activities, max_project_duration=max_project_duration)
 
     # Get all possible projects
-    all_projects = projects.get_all_possible_projects()
+    all_projects = projects.all_possible_projects
 
     # All possible project number
     print('all_possible_project_plans', len(all_projects), '\n', '-----------------')
@@ -383,7 +413,7 @@ if __name__ == "__main__":
         # print("activities_end_times:", project.activities_end_times)
         # print("max_network_length:", project.max_network_length)
         print("project_duration:", project.project_duration)
-        # print("week_resource_loading:", project.week_resource_loading)
+        print("week_resource_loading:", project.week_resource_loading)
         print("max_resources_per_week:", project.max_resources_per_week)
 
         # project.visualize_activities_schedule()
@@ -391,6 +421,9 @@ if __name__ == "__main__":
 
         print('-----------------')
 
+    conclusion = Conclusion(all_projects)
+    conclusion.get_projects_data_in_df()
+    conclusion.print_df_csv()
 
     """
     # Compute project
