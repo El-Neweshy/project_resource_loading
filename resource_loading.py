@@ -279,16 +279,17 @@ class Projects:
 
         # Create a list with all possible combinations
         items_lists = []
-        for i, level_duration in enumerate(sorted_levels_times):
+        for i, level_duration in enumerate(levels_times):
             allowed_total_delay_for_level = self.max_project_duration - level_duration
 
             item_list = []
             if allowed_total_delay_for_level == 0:
                 item_list = list(sums(num_activities[i], allowed_total_delay_for_level))
 
-            for w in range(allowed_total_delay_for_level):
-                item_list += list(sums(num_activities[i], allowed_total_delay_for_level - w))
-
+            else:
+                for w in range(allowed_total_delay_for_level + 1):
+                    item_list += list(sums(num_activities[i], allowed_total_delay_for_level - w))
+            # print('new_network', new_network_wo_duplicates, "len_of_level_list", len(item_list), "levels_times", levels_times, "allowed_delay_for_level", allowed_total_delay_for_level, "item_list", item_list)
             items_lists.append(item_list)
 
         def merge_two_lists_of_lists(lst1, lst2):
@@ -305,6 +306,9 @@ class Projects:
         target_lst = []
         for i, item_lst in enumerate(items_lists):
             target_lst = merge_two_lists_of_lists(target_lst, item_lst)
+
+        target_lst = list(set(target_lst))
+        # print(len(target_lst), target_lst)
 
         return final_sorted_network, target_lst
 
@@ -341,10 +345,12 @@ class Conclusion:
         self.df = self.get_projects_data_in_df()
 
     def get_projects_data_in_df(self):
+        # df initiation
         columns = [
             "project",
             "duration",
             "Max no. resources in a week",
+            "Sum of activities delays",
             "network",
             "activities start times",
             "activities end times",
@@ -352,11 +358,19 @@ class Conclusion:
             "resources allocation",
         ]
         df = pd.DataFrame(columns=columns)
+
+        # Fill the dataframe with all projects' data
         for p in self.projects:
+            # Calculate summation for activities delays
+            sum_activities_delays = 0
+            for activity in p.activities:
+                sum_activities_delays += activity.delay
+
             project_data = {
                 "project": p,
                 "duration": p.project_duration,
                 "Max no. resources in a week": p.max_resources_per_week,
+                "Sum of activities delays": sum_activities_delays,
                 "network": p.network,
                 "activities start times": p.activities_start_times,
                 "activities end times": p.activities_end_times,
@@ -369,9 +383,7 @@ class Conclusion:
 
     def print_df_csv(self):
         printed_df = deepcopy(self.df)
-
         printed_df = printed_df.drop('project', 1)
-
         printed_df.to_csv('conclusion.csv')
 
 
@@ -402,24 +414,17 @@ if __name__ == "__main__":
     # All possible project number
     print('all_possible_project_plans', len(all_projects), '\n', '-----------------')
 
-    # Iterate on all projects
-    for project in all_projects:
-        # print(project.project_duration)
-        # print("network:", project.network)
-        # print("levels_times:", project.levels_times)
-        # print("min_time:", project.min_time)
-        # print("activities_durations:", project.activities_durations)
-        print("activities_start_times:", project.activities_start_times)
-        # print("activities_end_times:", project.activities_end_times)
-        # print("max_network_length:", project.max_network_length)
-        print("project_duration:", project.project_duration)
-        print("week_resource_loading:", project.week_resource_loading)
-        print("max_resources_per_week:", project.max_resources_per_week)
-
-        # project.visualize_activities_schedule()
-        # project.visualize_resources_loading()
-
-        print('-----------------')
+    # # Iterate on all projects
+    # for project in all_projects:
+    #     print("activities_start_times:", project.activities_start_times)
+    #     print("project_duration:", project.project_duration)
+    #     print("week_resource_loading:", project.week_resource_loading)
+    #     print("max_resources_per_week:", project.max_resources_per_week)
+    #
+    #     # project.visualize_activities_schedule()
+    #     # project.visualize_resources_loading()
+    #
+    #     print('-----------------')
 
     conclusion = Conclusion(all_projects)
     conclusion.get_projects_data_in_df()
