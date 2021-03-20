@@ -40,6 +40,7 @@ class Activity:
 class Project:
     def __init__(self, activities):
         self.activities = activities
+        self.activities_delays = self.get_activities_delays()
         self.network = self.get_levels()
         self.levels_times = self.get_levels_times()
         self.min_time = self.get_min_time()  # Min time without crashing In weeks
@@ -98,6 +99,13 @@ class Project:
             for y in x:
                 yield from self.lengths(y)
 
+    def get_activities_delays(self):
+        activities_delays = dict()
+        for activity in self.activities:
+            activities_delays.update({activity.name: activity.delay})
+
+        return activities_delays
+
     def get_activities_start_times(self):
         activities_start_times = dict()
 
@@ -108,6 +116,7 @@ class Project:
                     level_start_time = 0
                     for s in sub_level:
                         level_start_time += self.activities_durations[s]
+                        level_start_time += self.activities_delays[s]
 
                     if level_start_time > activity.start_time:
                         activity.start_time = level_start_time
@@ -308,7 +317,7 @@ class Projects:
             target_lst = merge_two_lists_of_lists(target_lst, item_lst)
 
         target_lst = list(set(target_lst))
-        # print(len(target_lst), target_lst)
+        # print("target lst", len(target_lst), target_lst)
 
         return final_sorted_network, target_lst
 
@@ -389,7 +398,7 @@ class Conclusion:
 
 if __name__ == "__main__":
     # Define Maximum allowed project time
-    max_project_duration = 15
+    max_project_duration = 17
 
     # Define activities
     activities = [
@@ -403,7 +412,11 @@ if __name__ == "__main__":
     ]
 
     # project_test = Project(activities=activities)
+    # print(project_test.activities_start_times)
+    # print(project_test.activities_end_times)
     # print(project_test.network)
+    # print(project_test.project_duration)
+    # print(project_test.week_resource_loading)
 
     # Get possible projects after considering possible splitting and delaying
     projects = Projects(activities=activities, max_project_duration=max_project_duration)
@@ -414,36 +427,6 @@ if __name__ == "__main__":
     # All possible project number
     print('all_possible_project_plans', len(all_projects), '\n', '-----------------')
 
-    # # Iterate on all projects
-    # for project in all_projects:
-    #     print("activities_start_times:", project.activities_start_times)
-    #     print("project_duration:", project.project_duration)
-    #     print("week_resource_loading:", project.week_resource_loading)
-    #     print("max_resources_per_week:", project.max_resources_per_week)
-    #
-    #     # project.visualize_activities_schedule()
-    #     # project.visualize_resources_loading()
-    #
-    #     print('-----------------')
-
+    # Get conclusion out of all possible projects
     conclusion = Conclusion(all_projects)
-    conclusion.get_projects_data_in_df()
     conclusion.print_df_csv()
-
-    """
-    # Compute project
-    project = Project(projects.get_project_variations_after_splitting())
-    print("network:", project.network)
-    print("levels_times:", project.levels_times)
-    print("min_time:", project.min_time)
-    print("activities_durations:", project.activities_durations)
-    print("activities_start_times:", project.activities_start_times)
-    print("activities_end_times:", project.activities_end_times)
-    print("max_network_length:", project.max_network_length)
-    print("project_duration:", project.project_duration)
-    print("week_resource_loading:", project.week_resource_loading)
-    print("max_resources_per_week:", project.max_resources_per_week)
-    # Visualize project result
-    # project.visualize_activities_schedule()
-    # project.visualize_resources_loading()
-    """
