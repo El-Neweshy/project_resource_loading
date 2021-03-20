@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import numpy as np
 
 
 class Activity:
@@ -191,7 +192,7 @@ class Project:
         plt.show()
 
     def visualize_resources_loading(self):
-        x = np.arange(15)
+        x = np.arange(self.project_duration)
         plt.bar(x, height=self.week_resource_loading)
 
         plt.xticks(x, [str(i + 1) for i in range(len(self.week_resource_loading))])
@@ -223,12 +224,26 @@ class Projects:
         for activity in self.activities:
             if activity.dividable:
                 activity_new_ending_dict.update({activity.name: str(activity.name + str(activity.duration))})
+            else:
+                activity_new_ending_dict.update({activity.name: activity.name})
+
+        # print('activity_new_ending_dict', activity_new_ending_dict)
 
         for activity in project_activities:
             for activity_predecessor in activity.predecessor:
-                activity.predecessor = [activity_new_ending_dict[
-                                            activity_predecessor] if activity_predecessor in activity_new_ending_dict else x
-                                        for x in activity.predecessor]
+                # print("---->", activity.name, activity.predecessor, activity_predecessor)
+                new_activity_predecessor = activity.predecessor
+                try:
+                    new_activity_predecessor[new_activity_predecessor.index(activity_predecessor)] = \
+                        activity_new_ending_dict[activity_predecessor]
+                except:
+                    continue
+                # activity.predecessor = [activity_new_ending_dict[
+                #                             activity_predecessor] if activity_predecessor in activity_new_ending_dict else x
+                #                         for x in activity.predecessor]
+                # print('new activity predecessor', activity.predecessor)
+        # for activity in project_activities:
+        #     print(activity.name, activity.predecessor, activity.successor)
 
         return project_activities
 
@@ -333,7 +348,10 @@ class Projects:
 
         # generate all possible projects according to all delay combinations
         all_projects = []
-        for delay_times in target_lst:
+        print('Possible projects:', len(target_lst))
+        for x, delay_times in enumerate(target_lst):
+            print('Evaluating: ', x + 1)
+
             new_activities = []
             for i, activity in enumerate(ordered_activities):
                 activity_copy = deepcopy(activity)
@@ -395,10 +413,46 @@ class Conclusion:
         printed_df = printed_df.drop('project', 1)
         printed_df.to_csv('conclusion.csv')
 
+    def get_optimum_duration(self):
+        """
+            Getting the project with minimum duration,
+            if many, get project with less max project resources in a week,
+            if many, get project with less sum of activities delays (front loading)
+            if many, get any of them
+        """
+        new_df = deepcopy(self.df)
+        new_df = new_df.sort_values(by=["duration", "Max no. resources in a week", "Sum of activities delays"],
+                                    ascending=[True, True, True])
+        new_df = new_df.reset_index(drop=True)
+        optimum_prj = new_df['project'][0]
+        optimum_prj.visualize_activities_schedule()
+        optimum_prj.visualize_resources_loading()
+        # new_df.to_csv('get_optimum_duration.csv')
+
+        return optimum_prj
+
+    def get_optimum_resource_allocation(self):
+        """
+            getting project with less max project resources in a week
+            if many, Getting the project with minimum duration,
+            if many, get project with less sum of activities delays (front loading)
+            if many, get any of them
+        """
+        new_df = deepcopy(self.df)
+        new_df = new_df.sort_values(by=["Max no. resources in a week", "duration", "Sum of activities delays"],
+                                    ascending=[True, True, True])
+        new_df = new_df.reset_index(drop=True)
+        optimum_prj = new_df['project'][0]
+        optimum_prj.visualize_activities_schedule()
+        optimum_prj.visualize_resources_loading()
+        # new_df.to_csv('get_optimum_resource_allocation.csv')
+
+        return optimum_prj
+
 
 if __name__ == "__main__":
     # Define Maximum allowed project time
-    max_project_duration = 17
+    max_project_duration = 15
 
     # Define activities
     activities = [
@@ -424,9 +478,8 @@ if __name__ == "__main__":
     # Get all possible projects
     all_projects = projects.all_possible_projects
 
-    # All possible project number
-    print('all_possible_project_plans', len(all_projects), '\n', '-----------------')
-
     # Get conclusion out of all possible projects
     conclusion = Conclusion(all_projects)
     conclusion.print_df_csv()
+    conclusion.get_optimum_duration()
+    conclusion.get_optimum_resource_allocation()
