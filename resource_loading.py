@@ -348,7 +348,7 @@ class Projects:
 
         # generate all possible projects according to all delay combinations
         all_projects = []
-        print('Possible projects:', len(target_lst))
+        # print('Possible projects:', len(target_lst))
         for x, delay_times in enumerate(target_lst):
             print('Evaluating: ', x + 1)
 
@@ -432,8 +432,7 @@ class Conclusion:
         return optimum_prj
 
     def get_optimum_resource_allocation(self):
-        """
-            getting project with less max project resources in a week
+        """            getting project with less max project resources in a week
             if many, Getting the project with minimum duration,
             if many, get project with less sum of activities delays (front loading)
             if many, get any of them
@@ -452,7 +451,7 @@ class Conclusion:
 
 if __name__ == "__main__":
     # Define Maximum allowed project time
-    max_project_duration = 15
+    max_project_duration = 17
 
     # Define activities
     activities = [
@@ -462,7 +461,7 @@ if __name__ == "__main__":
         Activity(name="D", duration=2, resources=5, predecessor=["C"], successor=["E"]),
         Activity(name="E", duration=3, resources=6, predecessor=["D"]),
         Activity(name="F", duration=4, resources=2, successor=["G"]),
-        Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"])
+        Activity(name="G", duration=2, resources=6, predecessor=["F"], successor=["B"], dividable=True)
     ]
 
     # project_test = Project(activities=activities)
@@ -471,6 +470,8 @@ if __name__ == "__main__":
     # print(project_test.network)
     # print(project_test.project_duration)
     # print(project_test.week_resource_loading)
+    # project_test.visualize_activities_schedule()
+    # project_test.visualize_resources_loading()
 
     # Get possible projects after considering possible splitting and delaying
     projects = Projects(activities=activities, max_project_duration=max_project_duration)
@@ -481,5 +482,5 @@ if __name__ == "__main__":
     # Get conclusion out of all possible projects
     conclusion = Conclusion(all_projects)
     conclusion.print_df_csv()
-    conclusion.get_optimum_duration()
     conclusion.get_optimum_resource_allocation()
+    conclusion.get_optimum_duration()
